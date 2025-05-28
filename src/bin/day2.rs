@@ -37,11 +37,18 @@ fn is_safe(report: &[i32]) -> bool {
     
     for i in 1..report.len() {
         let diff = report[i] - report[i-1];
-        if diff < 1 || diff > 3 {
-            is_increasing = false;
+        
+        // Check for increasing pattern (1-3)
+        if diff >= 1 && diff <= 3 {
+            is_decreasing = false; // Can't be both increasing and decreasing
+        } 
+        // Check for decreasing pattern (-3 to -1)
+        else if diff >= -3 && diff <= -1 {
+            is_increasing = false; // Can't be both increasing and decreasing
         }
-        if diff > -1 || diff < -3 {
-            is_decreasing = false;
+        else {
+            // Not safe in either pattern
+            return false;
         }
     }
     
@@ -52,16 +59,44 @@ fn part1(reports: &[Vec<i32>]) {
     let mut safe_count = 0;
     
     for report in reports {
-        if is_safe(&report) {
+        if is_safe(report) {
             safe_count += 1;
-            println!("Report {:?} is safe", report);
-        } else {
-            println!("Report {:?} is NOT safe!", report);
         }
     }
 
-    println!("Day 2 solution:");
+    println!("Day 2 solution - Part 1:");
     println!("Number of safe reports: {}", safe_count);
+}
+
+fn part2(reports: &[Vec<i32>]) {
+    let mut safe_count = 0;
+    
+    for report in reports {
+        // Check if report is already safe
+        if is_safe(report) {
+            safe_count += 1;
+            continue;
+        }
+        
+        // Try removing each element one by one and check if the resulting report is safe
+        for i in 0..report.len() {
+            // Create a new report without the i-th element
+            let mut modified_report = Vec::with_capacity(report.len() - 1);
+            for (idx, &val) in report.iter().enumerate() {
+                if idx != i {
+                    modified_report.push(val);
+                }
+            }
+            
+            if is_safe(&modified_report) {
+                safe_count += 1;
+                break; // No need to try other removals
+            }
+        }
+    }
+    
+    println!("Day 2 solution - Part 2:");
+    println!("Number of safe reports with problem dampener: {}", safe_count);
 }
 
 fn main() {
@@ -69,4 +104,5 @@ fn main() {
     let reports = read_input();
 
     part1(&reports);
+    part2(&reports);
 }
