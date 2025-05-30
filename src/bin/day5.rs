@@ -49,7 +49,7 @@ fn read_input() -> (Vec<(usize, usize)>, Vec<Vec<usize>>) {
     (rules, page_lists)
 }
 
-fn check_rules(rules: &[(usize, usize)], position_map: &HashMap<usize, usize>) -> bool {
+fn check_rules_against_subset(rules: &[(usize, usize)], position_map: &HashMap<usize, usize>) -> bool {
     for &(a, b) in rules {
         if let (Some(&pos_a), Some(&pos_b)) = (position_map.get(&a), position_map.get(&b)) {
             if pos_a > pos_b {
@@ -83,7 +83,7 @@ fn part1(rules: &[(usize, usize)], page_lists: &[Vec<usize>]) {
     for page_list in page_lists {
         let position_map = build_position_map(page_list);
 
-        if check_rules(rules, &position_map) {
+        if check_rules_against_subset(rules, &position_map) {
             valid_middle_sum += get_midpag_pos(page_list);
         }
     }
@@ -91,52 +91,92 @@ fn part1(rules: &[(usize, usize)], page_lists: &[Vec<usize>]) {
     println!("Part 1 - Solution: {}", valid_middle_sum);
 }
 
-fn fix_by_rules(rules: &[(usize, usize)], position_map: &mut HashMap<usize, usize>) -> bool {
-    let mut changes_made = false;
+fn topological_sort(rules: &[(usize, usize)], nodes: &[usize]) -> Option<Vec<usize>> {
+    let node_set: std::collections::HashSet<_> = nodes.iter().cloned().collect();
+
+    // Only consider rules that involve nodes in this page list
+    let filtered_rules: Vec<_> = rules
+        .iter()
+        .filter(|&&(a, b)| node_set.contains(&a) && node_set.contains(&b))
+        .cloned()
+        .collect();
+
+    // Build adjacency list and in-degree count
+    let mut adj: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut in_degree: HashMap<usize, usize> = HashMap::new();
     
-    for &(a, b) in rules {
-        if let (Some(&pos_a), Some(&pos_b)) = (position_map.get(&a), position_map.get(&b)) {
-            if pos_a > pos_b {
-                // Swap positions to fix the rule
-                position_map.insert(a, pos_b);
-                position_map.insert(b, pos_a);
-                changes_made = true;
+    // Initialize all nodes
+    for &node in nodes {
+        adj.insert(node, Vec::new());
+        in_degree.insert(node, 0);
+    }
+    
+    // Add edges from filtered rules
+    for &(a, b) in &filtered_rules {
+        adj.entry(a).or_default().push(b);
+        *in_degree.entry(b).or_default() += 1;
+    }
+    
+    // Kahn's algorithm
+    let mut queue: Vec<usize> = in_degree.iter()
+        .filter(|&(_, &count)| count == 0)
+        .map(|(&node, _)| node)
+        .collect();
+    
+    let mut result = Vec::new();
+    
+    while !queue.is_empty() {
+        let node = queue.pop()?;
+        result.push(node);
+        
+        for neighbor in adj.get(&node).unwrap_or(&Vec::new()) {
+            let degree = in_degree.get_mut(neighbor)?;
+            *degree -= 1;
+            if *degree == 0 {
+                queue.push(*neighbor);
             }
         }
     }
     
-    changes_made
-}
-
-fn compose_page_list(position_map: &HashMap<usize, usize>) -> Vec<usize> {
-    let mut page_list: Vec<usize> = position_map.keys().cloned().collect();
-    page_list.sort_by_key(|&k| position_map.get(&k).unwrap_or(&usize::MAX));
-    page_list
+    // Check if all nodes were visited (no cycles)
+    if result.len() != nodes.len() {
+        None // Cycle detected
+    } else {
+        Some(result)
+    }
 }
 
 fn part2(rules: &[(usize, usize)], page_lists: &[Vec<usize>]) {
     let mut fixed_middle_sum = 0;
     
     for page_list in page_lists {
-        let mut position_map = build_position_map(page_list);
-        let mut iteration_count = 0;
-        let max_iterations = 100; // Safety limit to prevent infinite loops
-        
-        if check_rules(rules, &position_map) {
+        // Skip if the list is already valid
+        let position_map = build_position_map(page_list);
+        if check_rules_against_subset(rules, &position_map) {
             continue;
         }
+        
+        // Extract unique nodes from this page list
+        let nodes: Vec<usize> = page_list.iter().cloned().collect();
+        
+        // Perform topological sort using only relevant rules
+        if let Some(sorted) = topological_sort(rules, &nodes) {
+            // Create new position map based on topological sort
+            let new_position_map = build_position_map(&sorted);
+            
+            // Only consider rules relevant to this page list
+            let node_set: std::collections::HashSet<_> = nodes.iter().cloned().collect();
+            let relevant_rules: Vec<_> = rules
+                .iter()
+                .filter(|&&(a, b)| node_set.contains(&a) && node_set.contains(&b))
+                .cloned()
+                .collect();
 
-        // Keep applying rules until all violations are fixed
-        while fix_by_rules(rules, &mut position_map) && iteration_count < max_iterations {
-            iteration_count += 1;
+            // Check if the new ordering satisfies all relevant rules
+            if check_rules_against_subset(&relevant_rules, &new_position_map) {
+                fixed_middle_sum += get_midpag_pos(&sorted);
+            }
         }
-        
-        if !check_rules(rules, &position_map) {
-            // If rules are still not satisfied after fixing, skip this update
-            continue;
-        }
-        
-        fixed_middle_sum += get_midpag_pos(&compose_page_list(&position_map));
     }
 
     println!("Part 2 - Solution: {}", fixed_middle_sum);
