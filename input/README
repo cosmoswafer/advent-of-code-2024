@@ -1,0 +1,10 @@
+Place the puzzle input in the `dayX.txt` file in this directory.
+For example:
+
+```
+./day1.txt
+./day2.txt
+./day3.txt
+...
+./day25.txt
+```
