@@ -11,13 +11,13 @@ enum Direction {
 }
 
 #[derive(Debug, Clone)]
-struct Marker {
+struct Guard {
     direction: Direction,
     row: usize,
     col: usize,
 }
 
-impl Marker {
+impl Guard {
     fn new(direction: Direction, row: usize, col: usize) -> Self {
         Self { direction, row, col }
     }
@@ -32,7 +32,7 @@ impl Marker {
         }
     }
 
-    fn is_marker(c: char) -> bool {
+    fn is_guard(c: char) -> bool {
         Self::from_char(c, 0, 0).is_some()
     }
 
@@ -55,6 +55,51 @@ impl Marker {
     }
 }
 
+struct Map {
+    grid: Vec<Vec<char>>,
+    guard: Guard,
+}
+
+impl Map {
+    fn new(grid: Vec<Vec<char>>) -> Self {
+        // Find the guard in the grid
+        let mut guard = None;
+        
+        for (row_idx, row) in grid.iter().enumerate() {
+            for (col_idx, &cell) in row.iter().enumerate() {
+                if let Some(g) = Guard::from_char(cell, row_idx, col_idx) {
+                    guard = Some(g);
+                    break;
+                }
+            }
+            if guard.is_some() {
+                break;
+            }
+        }
+        
+        Self {
+            grid,
+            guard: guard.expect("No guard found in the map"),
+        }
+    }
+    
+    fn is_obstacle(&self, row: usize, col: usize) -> bool {
+        if row < self.grid.len() && col < self.grid[row].len() {
+            self.grid[row][col] == '#'
+        } else {
+            false
+        }
+    }
+    
+    fn guard_is_within_map(&self) -> bool {
+        self.guard.row < self.grid.len() && self.guard.col < self.grid[self.guard.row].len()
+    }
+    
+    fn get_guard(&self) -> Guard {
+        self.guard.clone()
+    }
+}
+
 fn read_input() -> Vec<Vec<char>> {
     let path = Path::new("input/day6s.txt");
 
@@ -69,19 +114,12 @@ fn read_input() -> Vec<Vec<char>> {
         .collect()
 }
 
-fn find_the_marker(input: &[Vec<char>]) -> Option<(usize, usize)> {
-    for (row_idx, row) in input.iter().enumerate() {
-        for (col_idx, &cell) in row.iter().enumerate() {
-            if let Some(marker) = Marker::from_char(cell, row_idx, col_idx) {
-                return Some((marker.row, marker.col));
-            }
-        }
-    }
-    None
-}
-
 fn part1(input: &[Vec<char>]) -> usize {
-    find_the_marker(input).expect("No marker found").0 + 1 // Return the row index + 1
+    let map = Map::new(input.to_vec());
+    let guard = map.get_guard();
+    
+    // Just returning the guard's row for demonstration
+    guard.row + 1 // Adding 1 because the problem likely expects 1-based indexing
 }
 
 fn main() {
