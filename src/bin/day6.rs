@@ -76,6 +76,24 @@ struct Map {
 }
 
 impl Map {
+    /// Places an obstacle at the given grid position.
+    /// If the position is out of bounds, does nothing.
+    fn place_obstacle(&mut self, row: usize, col: usize) {
+        if row < self.grid.len() && col < self.grid[row].len() {
+            self.grid[row][col] = '#';
+        }
+    }
+
+    /// Removes an obstacle at the given grid position, replacing it with a space.
+    /// If the position is out of bounds or not an obstacle, does nothing.
+    fn remove_obstacle(&mut self, row: usize, col: usize) {
+        if row < self.grid.len() && col < self.grid[row].len() {
+            if self.grid[row][col] == '#' {
+                self.grid[row][col] = ' ';
+            }
+        }
+    }
+
     fn new(grid: Vec<Vec<char>>) -> Self {
         // Find the guard in the grid
         let mut guard = None;
@@ -168,9 +186,57 @@ fn part1(input: &[Vec<char>]) -> usize {
     visited.len()
 }
 
+fn part2(input: &[Vec<char>]) -> usize {
+    let mut map = Map::new(input.to_vec());
+    let mut count = 0;
+    let guard_start_pos = (map.guard.row as usize, map.guard.col as usize);
+
+    for row in 0..map.grid.len() {
+        for col in 0..map.grid[row].len() {
+            // Skip guard start position and existing obstacles
+            if (row, col) == guard_start_pos || map.grid[row][col] == '#' {
+                continue;
+            }
+
+            map.place_obstacle(row, col);
+            
+            let mut sim_guard = map.get_guard();
+            let mut visited_states = std::collections::HashSet::new();
+
+            while map.is_within_map(sim_guard.row, sim_guard.col) {
+                let state = (sim_guard.row, sim_guard.col, sim_guard.direction);
+                
+                // Detect loop if we've seen this exact state before
+                if visited_states.contains(&state) {
+                    break;
+                }
+                visited_states.insert(state);
+
+                let (new_row, new_col) = sim_guard.front_position();
+                if map.is_obstacle(new_row, new_col) {
+                    sim_guard.rotate();
+                } else {
+                    sim_guard.walk();
+                }
+            }
+
+            // Count if guard is still in map (loop detected) or exited
+            if map.is_within_map(sim_guard.row, sim_guard.col) {
+                count += 1;
+            }
+
+            map.remove_obstacle(row, col);
+        }
+    }
+
+    count
+}
+
 fn main() {
     let input = read_input();
 
     let result = part1(&input);
     println!("Part 1 result: {}", result);
+    let result2 = part2(&input);
+    println!("Part 2 result: {}", result2);
 }
