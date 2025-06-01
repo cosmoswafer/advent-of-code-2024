@@ -128,7 +128,7 @@ impl Map {
 }
 
 fn read_input() -> Vec<Vec<char>> {
-    let path = Path::new("input/day6s.txt");
+    let path = Path::new("input/day6.txt");
 
     // Open the file
     let file = File::open(&path).expect("Failed to open file");
