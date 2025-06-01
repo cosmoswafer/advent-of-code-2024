@@ -147,13 +147,11 @@ fn part1(input: &[Vec<char>]) -> usize {
     let mut guard = map.get_guard();
 
     // Track visited positions
-    let mut visited = std::collections::HashSet::<(i32, i32, Direction)>::new();
+    let mut visited = std::collections::HashSet::<(i32, i32)>::new();
 
     // Continue moving the guard until it leaves the map or we detect a loop
     while map.is_within_map(guard.row, guard.col) {
-        if !visited.contains(&(guard.row, guard.col, guard.direction)) {
-            visited.insert((guard.row, guard.col, guard.direction));
-        }
+        visited.insert((guard.row, guard.col));
 
         // Try to move forward
         let (new_row, new_col) = guard.front_position();
