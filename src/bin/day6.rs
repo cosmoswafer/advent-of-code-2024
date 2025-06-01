@@ -19,12 +19,12 @@ enum Direction {
 #[derive(Debug, Clone)]
 struct Guard {
     direction: Direction,
-    row: usize,
-    col: usize,
+    row: i32,
+    col: i32,
 }
 
 impl Guard {
-    fn new(direction: Direction, row: usize, col: usize) -> Self {
+    fn new(direction: Direction, row: i32, col: i32) -> Self {
         Self {
             direction,
             row,
@@ -35,11 +35,7 @@ impl Guard {
     fn from_char(c: char, row: usize, col: usize) -> Option<Self> {
         Direction::from_str(&c.to_string())
             .ok()
-            .map(|d| Self::new(d, row, col))
-    }
-
-    fn is_guard(c: char) -> bool {
-        Self::from_char(c, 0, 0).is_some()
+            .map(|d| Self::new(d, row as i32, col as i32))
     }
 
     fn rotate(&mut self) {
@@ -58,11 +54,12 @@ impl Guard {
         self.col = new_col;
     }
 
+    #[allow(dead_code)]
     fn to_char(&self) -> char {
         self.direction.to_string().chars().next().unwrap()
     }
 
-    fn front_position(&self) -> (usize, usize) {
+    fn front_position(&self) -> (i32, i32) {
         // Calculate the position in front of the guard based on its direction
         match self.direction {
             Direction::Up => (self.row - 1, self.col),
@@ -101,20 +98,28 @@ impl Map {
         }
     }
 
-    fn is_obstacle(&self, row: usize, col: usize) -> bool {
-        if row < self.grid.len() && col < self.grid[row].len() {
-            self.grid[row][col] == '#'
+    fn is_obstacle(&self, row: i32, col: i32) -> bool {
+        if row >= 0 && col >= 0 {
+            let row = row as usize;
+            let col = col as usize;
+            if row < self.grid.len() && col < self.grid[row].len() {
+                self.grid[row][col] == '#'
+            } else {
+                false
+            }
         } else {
             false
         }
     }
 
-    fn guard_is_within_map(&self) -> bool {
-        self.guard.row < self.grid.len() && self.guard.col < self.grid[self.guard.row].len()
-    }
-
-    fn is_within_map(&self, row: usize, col: usize) -> bool {
-        row < self.grid.len() && col < self.grid[row].len()
+    fn is_within_map(&self, row: i32, col: i32) -> bool {
+        if row >= 0 && col >= 0 {
+            let row = row as usize;
+            let col = col as usize;
+            row < self.grid.len() && col < self.grid[row].len()
+        } else {
+            false
+        }
     }
 
     fn get_guard(&self) -> Guard {
@@ -142,7 +147,7 @@ fn part1(input: &[Vec<char>]) -> usize {
     let mut guard = map.get_guard();
 
     // Track visited positions
-    let mut visited = std::collections::HashSet::new();
+    let mut visited = std::collections::HashSet::<(i32, i32, Direction)>::new();
 
     // Continue moving the guard until it leaves the map or we detect a loop
     while map.is_within_map(guard.row, guard.col) {
