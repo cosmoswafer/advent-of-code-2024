@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::str::FromStr; // Added to make `from_str()` work with `strum::EnumString`
-use strum::{IntoStaticStr, Display, EnumString};
+use strum::{Display, EnumString, IntoStaticStr};
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoStaticStr, Display, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, IntoStaticStr, Display, EnumString)]
 enum Direction {
     #[strum(serialize = "^")]
     Up,
@@ -25,11 +25,17 @@ struct Guard {
 
 impl Guard {
     fn new(direction: Direction, row: usize, col: usize) -> Self {
-        Self { direction, row, col }
+        Self {
+            direction,
+            row,
+            col,
+        }
     }
 
     fn from_char(c: char, row: usize, col: usize) -> Option<Self> {
-        Direction::from_str(&c.to_string()).ok().map(|d| Self::new(d, row, col))
+        Direction::from_str(&c.to_string())
+            .ok()
+            .map(|d| Self::new(d, row, col))
     }
 
     fn is_guard(c: char) -> bool {
@@ -76,7 +82,7 @@ impl Map {
     fn new(grid: Vec<Vec<char>>) -> Self {
         // Find the guard in the grid
         let mut guard = None;
-        
+
         for (row_idx, row) in grid.iter().enumerate() {
             for (col_idx, &cell) in row.iter().enumerate() {
                 if let Some(g) = Guard::from_char(cell, row_idx, col_idx) {
@@ -88,13 +94,13 @@ impl Map {
                 break;
             }
         }
-        
+
         Self {
             grid,
             guard: guard.expect("No guard found in the map"),
         }
     }
-    
+
     fn is_obstacle(&self, row: usize, col: usize) -> bool {
         if row < self.grid.len() && col < self.grid[row].len() {
             self.grid[row][col] == '#'
@@ -102,11 +108,15 @@ impl Map {
             false
         }
     }
-    
+
     fn guard_is_within_map(&self) -> bool {
         self.guard.row < self.grid.len() && self.guard.col < self.grid[self.guard.row].len()
     }
-    
+
+    fn is_within_map(&self, row: usize, col: usize) -> bool {
+        row < self.grid.len() && col < self.grid[row].len()
+    }
+
     fn get_guard(&self) -> Guard {
         self.guard.clone()
     }
@@ -120,7 +130,8 @@ fn read_input() -> Vec<Vec<char>> {
     let reader = BufReader::new(file);
 
     // Read the file line by line and convert to array of arrays of characters
-    reader.lines()
+    reader
+        .lines()
         .filter_map(Result::ok)
         .map(|line| line.chars().collect())
         .collect()
@@ -128,10 +139,30 @@ fn read_input() -> Vec<Vec<char>> {
 
 fn part1(input: &[Vec<char>]) -> usize {
     let map = Map::new(input.to_vec());
-    let guard = map.get_guard();
-    
-    // Just returning the guard's row for demonstration
-    guard.row + 1 // Adding 1 because the problem likely expects 1-based indexing
+    let mut guard = map.get_guard();
+
+    // Track visited positions
+    let mut visited = std::collections::HashSet::new();
+
+    // Continue moving the guard until it leaves the map or we detect a loop
+    while map.is_within_map(guard.row, guard.col) {
+        if !visited.contains(&(guard.row, guard.col, guard.direction)) {
+            visited.insert((guard.row, guard.col, guard.direction));
+        }
+
+        // Try to move forward
+        let (new_row, new_col) = guard.front_position();
+
+        if map.is_obstacle(new_row, new_col) {
+            // Obstacle ahead, rotate and don't move
+            guard.rotate();
+        } else {
+            guard.walk();
+        }
+    }
+
+    // Return the number of unique positions visited
+    visited.len()
 }
 
 fn main() {
