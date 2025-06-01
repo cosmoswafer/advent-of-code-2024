@@ -1,12 +1,18 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
+use std::str::FromStr; // Added to make `from_str()` work with `strum::EnumString`
+use strum::{IntoStaticStr, Display, EnumString};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoStaticStr, Display, EnumString)]
 enum Direction {
+    #[strum(serialize = "^")]
     Up,
+    #[strum(serialize = ">")]
     Right,
+    #[strum(serialize = "v")]
     Down,
+    #[strum(serialize = "<")]
     Left,
 }
 
@@ -23,13 +29,7 @@ impl Guard {
     }
 
     fn from_char(c: char, row: usize, col: usize) -> Option<Self> {
-        match c {
-            '^' => Some(Self::new(Direction::Up, row, col)),
-            '>' => Some(Self::new(Direction::Right, row, col)),
-            'v' => Some(Self::new(Direction::Down, row, col)),
-            '<' => Some(Self::new(Direction::Left, row, col)),
-            _ => None,
-        }
+        Direction::from_str(&c.to_string()).ok().map(|d| Self::new(d, row, col))
     }
 
     fn is_guard(c: char) -> bool {
@@ -45,12 +45,24 @@ impl Guard {
         };
     }
 
+    fn walk(&mut self) {
+        // Move to its front position
+        let (new_row, new_col) = self.front_position();
+        self.row = new_row;
+        self.col = new_col;
+    }
+
     fn to_char(&self) -> char {
+        self.direction.to_string().chars().next().unwrap()
+    }
+
+    fn front_position(&self) -> (usize, usize) {
+        // Calculate the position in front of the guard based on its direction
         match self.direction {
-            Direction::Up => '^',
-            Direction::Right => '>',
-            Direction::Down => 'v',
-            Direction::Left => '<',
+            Direction::Up => (self.row - 1, self.col),
+            Direction::Right => (self.row, self.col + 1),
+            Direction::Down => (self.row + 1, self.col),
+            Direction::Left => (self.row, self.col - 1),
         }
     }
 }
