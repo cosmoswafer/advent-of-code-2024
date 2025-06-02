@@ -31,7 +31,7 @@ fn read_input() -> Vec<(i64, Vec<i64>)> {
     result
 }
 
-fn part1(input: Vec<(i64, Vec<i64>)>) -> i64 {
+fn part1(input: &Vec<(i64, Vec<i64>)>) -> i64 {
     let mut count: i64 = 0;
 
     for (first, numbers) in input {
@@ -41,7 +41,7 @@ fn part1(input: Vec<(i64, Vec<i64>)>) -> i64 {
         }
 
         if m == 1 {
-            if numbers[0] == first {
+            if numbers[0] == *first {
                 count += 1;
             }
             continue;
@@ -70,6 +70,67 @@ fn part1(input: Vec<(i64, Vec<i64>)>) -> i64 {
                 }
             }
 
+            if result == *first {
+                valid = true;
+                break;
+            }
+        }
+
+        if valid {
+            count += *first;
+        }
+    }
+
+    count
+}
+
+fn part2(input: Vec<(i64, Vec<i64>)>) -> i64 {
+    let mut count: i64 = 0;
+
+    for (first, numbers) in input {
+        let m = numbers.len();
+        if m == 0 {
+            continue;
+        }
+
+        if m == 1 {
+            if numbers[0] == first {
+                count += 1;
+            }
+            continue;
+        }
+
+        let mut valid = false;
+        let num_ops = m - 1;
+
+        for mask in 0..(3_i64.pow(num_ops as u32) as usize) {
+            let mut ops = Vec::new();
+            for i in 0..num_ops {
+                let op_index = (mask / (3_i64.pow(i as u32)) as usize) % 3;
+                match op_index {
+                    0 => ops.push('+'),
+                    1 => ops.push('*'),
+                    2 => ops.push('|'),
+                    _ => panic!("Invalid operator"),
+                }
+            }
+
+            let mut result = numbers[0];
+            for i in 0..num_ops {
+                let next = numbers[i + 1];
+                match ops[i] {
+                    '+' => result += next,
+                    '*' => result *= next,
+                    '|' => {
+                        let next_str = next.to_string();
+                        let result_str = result.to_string();
+                        let combined = format!("{}{}", result_str, next_str);
+                        result = combined.parse::<i64>().unwrap();
+                    },
+                    _ => panic!("Invalid operator"),
+                }
+            }
+
             if result == first {
                 valid = true;
                 break;
@@ -87,6 +148,9 @@ fn part1(input: Vec<(i64, Vec<i64>)>) -> i64 {
 fn main() {
     let input = read_input();
 
-    let result = part1(input);
+    let result = part1(&input);
     println!("Part 1 result: {}", result);
+
+    let result = part2(input);
+    println!("Part 2 result: {}", result);
 }
