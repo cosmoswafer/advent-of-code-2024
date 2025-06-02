@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 fn read_input() -> Vec<Vec<char>> {
-    let path = Path::new("input/day8.txt");
+    let path = Path::new("input/day8s.txt");
 
     // Open the file
     let file = File::open(&path).expect("Failed to open file");
