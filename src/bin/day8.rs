@@ -1,104 +1,78 @@
+use std::collections::{HashSet, HashMap};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-fn read_input() -> Vec<Vec<char>> {
-    let path = Path::new("input/day8s.txt");
+struct AntennaMap {
+    nrows: usize,
+    ncols: usize,
+    positions: HashMap<char, Vec<(usize, usize)>>,
+}
 
-    // Open the file
+fn read_input() -> AntennaMap {
+    let path = Path::new("input/day8.txt");
+
     let file = File::open(&path).expect("Failed to open file");
     let reader = BufReader::new(file);
 
-    let mut output = Vec::new();
-    // Read the input file into a vector of vectors of characters
-    for line_result in reader.lines() {
-        let line = line_result.expect("Failed to read line");
-        output.push(line.chars().collect());
+    let lines: Vec<String> = reader
+        .lines()
+        .map(|l| l.expect("Failed to read line")
+    ).collect();
+
+    let nrows = lines.len();
+    let ncols = if nrows > 0 { lines[0].len() } else { 0 };
+
+    let mut positions = HashMap::new();
+
+    for (row_idx, line) in lines.iter().enumerate() {
+        for (col_idx, c) in line.chars().enumerate() {
+            if is_antenna(c) {
+                positions
+                    .entry(c)
+                    .or_insert_with(Vec::new)
+                    .push((row_idx, col_idx));
+            }
+        }
     }
 
-    output
+    AntennaMap {
+        nrows,
+        ncols,
+        positions,
+    }
 }
 
 fn is_antenna(c: char) -> bool {
-    // Return true if the character is digit/uppercase/lowercase
     c.is_ascii_alphanumeric()
 }
 
-fn part1(input: &Vec<Vec<char>>) -> usize {
-    let mut count = 0;
+fn part1(input: &AntennaMap) -> usize {
+    let mut counted = HashSet::new();
 
-    // Go through each character in the input
-    for (row_idx, row) in input.iter().enumerate() {
-        for (col_idx, &c) in row.iter().enumerate() {
-            if is_antenna(c) {
-                // Check horizontal (left and right)
-                for x in 0..col_idx {
-                    if input[row_idx][x] == c {
-                        count += 1;
-                    }
+    for (_c, positions) in &input.positions {
+        let len = positions.len();
+        for i in 0..len {
+            for j in 0..len {
+                if i == j {
+                    continue;
                 }
-                for x in col_idx + 1..input[row_idx].len() {
-                    if input[row_idx][x] == c {
-                        count += 1;
-                    }
-                }
+                let a = positions[i];
+                let b = positions[j];
+                // Compute the third point that is collinear and at twice the distance
+                let x = 2 * b.0 as i32 - a.0 as i32;
+                let y = 2 * b.1 as i32 - a.1 as i32;
+                let c_point = (x as usize, y as usize);
 
-                // Check vertical (up and down)
-                for y in 0..row_idx {
-                    if input[y][col_idx] == c {
-                        count += 1;
-                    }
-                }
-                for y in row_idx + 1..input.len() {
-                    if input[y][col_idx] == c {
-                        count += 1;
-                    }
-                }
-
-                // Check diagonal (top-left to bottom-right)
-                let mut y = row_idx as i32 - 1;
-                let mut x = col_idx as i32 - 1;
-                while y >= 0 && x >= 0 {
-                    if input[y as usize][x as usize] == c {
-                        count += 1;
-                    }
-                    y -= 1;
-                    x -= 1;
-                }
-                y = row_idx as i32 + 1;
-                x = col_idx as i32 + 1;
-                while y < input.len() as i32 && x < input[y as usize].len() as i32 {
-                    if input[y as usize][x as usize] == c {
-                        count += 1;
-                    }
-                    y += 1;
-                    x += 1;
-                }
-
-                // Check diagonal (top-right to bottom-left)
-                y = row_idx as i32 - 1;
-                x = col_idx as i32 + 1;
-                while y >= 0 && x < input[y as usize].len() as i32 {
-                    if input[y as usize][x as usize] == c {
-                        count += 1;
-                    }
-                    y -= 1;
-                    x += 1;
-                }
-                y = row_idx as i32 + 1;
-                x = col_idx as i32 - 1;
-                while y < input.len() as i32 && x >= 0 {
-                    if input[y as usize][x as usize] == c {
-                        count += 1;
-                    }
-                    y += 1;
-                    x -= 1;
+                // Check if the point is within bounds and exists in the current positions
+                if c_point.0 < input.nrows && c_point.1 < input.ncols {
+                    counted.insert(c_point);
                 }
             }
         }
     }
 
-    count
+    counted.len()
 }
 
 fn main() {
