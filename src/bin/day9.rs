@@ -12,40 +12,46 @@ fn read_input() -> Vec<char> {
     line.chars().collect()
 }
 
+#[derive(Clone, Copy)] // FileBlock can be Copy as usize is Copy
+enum FileBlock {
+    FileId(usize),
+    FreeSpace,
+}
+
 fn part1(input: Vec<char>) -> usize {
     let mut file_blocks = Vec::new();
-    let mut file_id = 0;
-    let mut free_space = false;
+    let mut file_id_counter = 0; // Renamed to avoid confusion with loop variable 'file_id'
+    let mut is_currently_free_space_segment = false; // Renamed for clarity
 
     for c in input {
         let cdigit = c.to_digit(10).unwrap_or(0) as usize;
-        if free_space {
-            free_space = false;
-            file_blocks.extend(std::iter::repeat('.').take(cdigit));
+        if is_currently_free_space_segment {
+            is_currently_free_space_segment = false;
+            file_blocks.extend(std::iter::repeat(FileBlock::FreeSpace).take(cdigit));
         } else {
-            free_space = true;
-            file_blocks.extend(std::iter::repeat(char::from_digit(file_id, 10).expect("Not digit")).take(cdigit));
-            file_id += 1;
+            is_currently_free_space_segment = true;
+            file_blocks.extend(std::iter::repeat(FileBlock::FileId(file_id_counter)).take(cdigit));
+            file_id_counter += 1;
         }
     }
 
-    let mut i = 0;
-    let mut j = file_blocks.len() - 1;
-
-    while i < j {
-        while file_blocks[i] != '.' && i < j {
-            i += 1;
-        }
-        while file_blocks[j] == '.' && i < j {
-            j -= 1;
-        }
-        file_blocks.swap(i, j);
-    }
+    // Defragment the blocks: keep only FileId blocks, preserving their relative order.
+    // The original swapping loop was incorrect and could lead to an infinite loop.
+    file_blocks.retain(|block| matches!(block, FileBlock::FileId(_)));
 
     let mut checksum = 0;
-    for (i, c) in file_blocks.iter().enumerate() {
-        if *c != '.' {
-            checksum += c.to_digit(10).unwrap() as usize * (i + 0);
+    for (i, block) in file_blocks.iter().enumerate() {
+        // After retain, all blocks are guaranteed to be FileId.
+        // The original `if let` is fine, but we can be more direct.
+        match block {
+            FileBlock::FileId(id) => {
+                checksum += *id * i;
+            }
+            FileBlock::FreeSpace => {
+                // This case should not be reached after the retain operation.
+                // For robustness in a larger application, one might log an error or panic.
+                // In an AoC context, it's often assumed unreachable.
+            }
         }
     }
 
