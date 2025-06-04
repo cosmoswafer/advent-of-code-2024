@@ -24,7 +24,7 @@ fn part1(input: Vec<char>) -> usize {
             file_blocks.extend(std::iter::repeat('.').take(cdigit));
         } else {
             free_space = true;
-            file_blocks.extend(std::iter::repeat(char::from_digit(file_id, 10).unwrap()).take(cdigit));
+            file_blocks.extend(std::iter::repeat(char::from_digit(file_id, 10).expect("Not digit")).take(cdigit));
             file_id += 1;
         }
     }
