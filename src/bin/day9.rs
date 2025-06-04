@@ -12,7 +12,7 @@ fn read_input() -> Vec<char> {
     line.chars().collect()
 }
 
-#[derive(Clone, Copy)] // FileBlock can be Copy as usize is Copy
+#[derive(Clone)]
 enum FileBlock {
     FileId(usize),
     FreeSpace,
@@ -20,38 +20,45 @@ enum FileBlock {
 
 fn part1(input: Vec<char>) -> usize {
     let mut file_blocks = Vec::new();
-    let mut file_id_counter = 0; // Renamed to avoid confusion with loop variable 'file_id'
-    let mut is_currently_free_space_segment = false; // Renamed for clarity
+    let mut file_id = 0;
+    let mut free_space = false;
 
     for c in input {
         let cdigit = c.to_digit(10).unwrap_or(0) as usize;
-        if is_currently_free_space_segment {
-            is_currently_free_space_segment = false;
+        if free_space {
+            free_space = false;
             file_blocks.extend(std::iter::repeat(FileBlock::FreeSpace).take(cdigit));
         } else {
-            is_currently_free_space_segment = true;
-            file_blocks.extend(std::iter::repeat(FileBlock::FileId(file_id_counter)).take(cdigit));
-            file_id_counter += 1;
+            free_space = true;
+            file_blocks.extend(std::iter::repeat(FileBlock::FileId(file_id)).take(cdigit));
+            file_id += 1;
         }
     }
 
-    // Defragment the blocks: keep only FileId blocks, preserving their relative order.
-    // The original swapping loop was incorrect and could lead to an infinite loop.
-    file_blocks.retain(|block| matches!(block, FileBlock::FileId(_)));
+    let mut i = 0;
+    let mut j = file_blocks.len() - 1;
+
+    while i < j {
+        // Find next file block from left
+        while i < j && !matches!(file_blocks[i], FileBlock::FreeSpace) {
+            i += 1;
+        }
+        // Find next free space from right
+        while i < j && matches!(file_blocks[j], FileBlock::FreeSpace) {
+            j -= 1;
+        }
+        // Swap and move pointers
+        if i < j {
+            file_blocks.swap(i, j);
+            i += 1;
+            j -= 1;
+        }
+    }
 
     let mut checksum = 0;
-    for (i, block) in file_blocks.iter().enumerate() {
-        // After retain, all blocks are guaranteed to be FileId.
-        // The original `if let` is fine, but we can be more direct.
-        match block {
-            FileBlock::FileId(id) => {
-                checksum += *id * i;
-            }
-            FileBlock::FreeSpace => {
-                // This case should not be reached after the retain operation.
-                // For robustness in a larger application, one might log an error or panic.
-                // In an AoC context, it's often assumed unreachable.
-            }
+    for (idx, block) in file_blocks.iter().enumerate() {
+        if let FileBlock::FileId(id) = block {
+            checksum += idx * *id;
         }
     }
 
