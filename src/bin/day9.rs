@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 fn read_input() -> Vec<char> {
-    let path = Path::new("input/day9s.txt");
+    let path = Path::new("input/day9.txt");
 
     let file = File::open(&path).expect("Failed to open file");
     let reader = BufReader::new(file);
@@ -86,16 +86,6 @@ fn part2(input: &Vec<char>) -> usize {
         }
     }
     
-    // Print the initial file blocks for debugging
-    println!("Initial file blocks:");
-    for block in &file_blocks {
-        match block {
-            FileBlock::FileId(id) => print!("{}", id),
-            FileBlock::FreeSpace => print!("."),
-        }
-    }
-    println!("\n");
-    
     // Start from the end of the array and move backwards
     let mut pos = file_blocks.len();
     
@@ -140,7 +130,7 @@ fn part2(input: &Vec<char>) -> usize {
         
         // Find the leftmost contiguous free space that can fit the file
         let mut free_start = 0;
-        let mut found_suitable_spot = false;
+        // Removed `found_suitable_spot` as it was unused
         while free_start < file_start {
             // Find the start of a free space region
             while free_start < file_start && !matches!(file_blocks[free_start], FileBlock::FreeSpace) {
@@ -169,7 +159,7 @@ fn part2(input: &Vec<char>) -> usize {
                     file_blocks[i] = FileBlock::FreeSpace;
                 }
                 
-                found_suitable_spot = true;
+                // Removed assignment to `found_suitable_spot` as it was unused
                 // Break out of the free space search
                 break;
             }
@@ -177,16 +167,6 @@ fn part2(input: &Vec<char>) -> usize {
             // Move to the next potential free space region
             free_start = free_end;
         }
-        
-        // Print the updated file blocks for debugging
-        println!("After moving file {}:", current_file_id);
-        for block in &file_blocks {
-            match block {
-                FileBlock::FileId(id) => print!("{}", id),
-                FileBlock::FreeSpace => print!("."),
-            }
-        }
-        println!("\n");
         
         // Move left to the next file
         pos = file_start;
